@@ -1,6 +1,3 @@
-import string
-
-
 def check_wiki_link(candidate):
     """
     Given a string, detect if it is a valid wiki link. A wiki link should
@@ -29,6 +26,14 @@ def check_wiki_link(candidate):
 
 
 def check_wiki_word(candidate):
-    valid_characters = string.ascii_letters + string.digits
+    if len(candidate) < 2 or not all([char.isalnum() for char in candidate]):
+        return None
 
-    # TODO
+    if not candidate[0].isupper():
+        return None
+
+    if not (any([char.isupper() for char in candidate[1:]]) and
+            any([char.islower() for char in candidate[1:]])):
+        return None
+
+    return {"label": candidate, "target": candidate}
