@@ -149,6 +149,13 @@ class DBObject:
         sql = f"DELETE FROM {self.table_name} WHERE id = ?"
         return sql, [self.id]
 
+    def to_dict(self):
+        """
+        Implement this so your DBObject can be turned into a dictionary.
+        This will be needed in our API.
+        """
+        raise NotImplementedError
+
     def validate(self):
         """
         Override this to check your object for any errors before
