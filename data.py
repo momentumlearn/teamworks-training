@@ -1,4 +1,6 @@
 import sqlite3
+from datetime import datetime
+import re
 
 
 class Database:
@@ -188,3 +190,99 @@ class DBObject:
         Override this for any after-delete actions.
         """
         pass
+
+
+class Page(DBObject):
+    """
+    A Page is one individual page in our wiki. 
+    The content of the page is held in the page history.
+    """
+
+    table_name = "pages"
+
+    @classmethod
+    def create_table_sql(cls):
+        return """
+        CREATE TABLE pages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT UNIQUE
+        )
+        """
+
+    def __init__(self, id=None, title=None, history=None):
+        super().__init__()
+        self.id = id
+        self.title = title
+        self.history = history or []
+
+    def save_sql(self):
+        if self.id:
+            return "UPDATE pages SET title = ? WHERE id = ?", [
+                self.title, self.id
+            ]
+
+        return "INSERT INTO pages (title) VALUES (?)", [self.title]
+
+    def validate(self):
+        if not self.title:
+            return False
+        return True
+
+
+class PageVersion(DBObject):
+    table_name = 'page_versions'
+
+    @classmethod
+    def create_table_sql(cls):
+        return """
+        CREATE TABLE page_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_id INTEGER REFERENCES pages(id),
+            body TEXT,
+            saved_at TIMESTAMP            
+        )
+        """
+
+    @classmethod
+    def select_sql(cls, sql_fragment, params):
+        """
+        Override this in order to generate the SELECT statement
+        needed to get back data from your database.
+        """
+        sql, params = super().select_sql(sql_fragment, params)
+        if "ORDER BY" not in sql.upper():
+            sql_parts = sql.split(" ")
+            idx = 0
+            for idx, part in enumerate(sql_parts):
+                if part.upper() == "LIMIT" or part.upper() == "OFFSET":
+                    break
+
+            sql_parts.insert(idx, "ORDER BY saved_at")
+            sql = " ".join(sql_parts)
+
+        return sql, params
+
+    def __init__(self, page_id=None, id=None, body=None, saved_at=None):
+        super().__init__()
+        self.id = id
+        self.page_id = page_id
+        self.body = body
+        self.saved_at = saved_at
+
+    def save_sql(self):
+        if self.id:
+            return "UPDATE page_versions SET page_id = ?, body = ?, saved_at = ? WHERE id = ?", [
+                self.page_id, self.body, self.saved_at, self.id
+            ]
+
+        return "INSERT INTO page_versions (page_id, body, saved_at) VALUES (?, ?, ?)", [
+            self.page_id, self.body, self.saved_at
+        ]
+
+    def before_save(self):
+        self.saved_at = datetime.now()
+
+    def validate(self):
+        if not self.body:
+            return False
+        return True
