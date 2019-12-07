@@ -15,35 +15,25 @@ class DBObject:
     table_name = None
 
     @classmethod
-    def set_database(cls, database_uri):
-        """
-        Establish a connection to the database. We set the
-        row_factory in order to get back dict-like objects from
-        the database.
-        """
-        cls.con = sqlite3.connect(database_uri)
-        cls.con.row_factory = sqlite3.Row
-
-    @classmethod
-    def create_table(cls, recreate=False):
+    def create_table(cls, db, recreate=False):
         """
         Create a table for the DBObject.
         """
         if recreate:
             cls.drop_table()
-        with cls.con:
-            cls.con.execute(cls.create_table_sql())
+        with db:
+            db.execute(cls.create_table_sql())
 
     @classmethod
-    def drop_table(cls):
+    def drop_table(cls, db):
         """
         Drop the table for the DBObject.
         """
-        with cls.con:
-            cls.con.execute(f"DROP TABLE {cls.table_name}")
+        with db:
+            db.execute(f"DROP TABLE {cls.table_name}")
 
     @classmethod
-    def select(cls, sql_fragment="", params=None):
+    def select(cls, db, sql_fragment="", params=None):
         """
         Run a SELECT statement and return the results as
         DBObjects. The inheriting DBObject class should implement
@@ -53,8 +43,9 @@ class DBObject:
         if params is None:
             params = []
         sql, params = cls.select_sql(sql_fragment, params)
-        with cls.con:
-            cursor = cls.con.execute(sql, params)
+        with db:
+            db.row_factory = sqlite3.Row
+            cursor = db.execute(sql, params)
             return [cls(**row) for row in cursor.fetchall()]
 
     @classmethod
@@ -85,7 +76,7 @@ class DBObject:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def save(self):
+    def save(self, db):
         """
         Given a database object, save it to the database. This will run
         several "hooks" on the object:
@@ -95,14 +86,14 @@ class DBObject:
         - save_sql() -- returns sql + parameters
         - after_save()
         """
-        if self.validate():
-            self.before_save()
+        if self.validate(db):
+            self.before_save(db)
             sql, params = self.save_sql()
-            with self.con:
-                cursor = self.con.execute(sql, params)
+            with db:
+                cursor = db.execute(sql, params)
                 if self.id is None:
                     self.id = cursor.lastrowid
-            self.after_save()
+            self.after_save(db)
             return True
         return False
 
@@ -115,7 +106,7 @@ class DBObject:
         """
         raise NotImplementedError
 
-    def delete(self):
+    def delete(self, db):
         """
         Given a database object, remove it from the database. This
         will run several "hooks" on the object:
@@ -126,11 +117,11 @@ class DBObject:
         """
 
         if self.id:
-            self.before_delete()
-            sql, params = self.delete_sql()
-            with self.con:
-                self.con.execute(sql, params)
-            self.after_save()
+            self.before_delete(db)
+            sql, params = self.delete_sql(db)
+            with db:
+                db.execute(sql, params)
+            self.after_save(db)
 
     def delete_sql(self, db=None):
         """
@@ -151,7 +142,7 @@ class DBObject:
         """
         raise NotImplementedError
 
-    def validate(self):
+    def validate(self, db=None):
         """
         Override this to check your object for any errors before
         saving to the database. It should return a boolean,
@@ -160,25 +151,25 @@ class DBObject:
         """
         return True
 
-    def before_save(self):
+    def before_save(self, db=None):
         """
         Override this for any before-save actions.
         """
         pass
 
-    def after_save(self):
+    def after_save(self, db=None):
         """
         Override this for any after-save actions.
         """
         pass
 
-    def before_delete(self):
+    def before_delete(self, db=None):
         """
         Override this for any before-delete actions.
         """
         pass
 
-    def after_delete(self):
+    def after_delete(self, db=None):
         """
         Override this for any after-delete actions.
         """
@@ -216,15 +207,15 @@ class Page(DBObject):
 
         return "INSERT INTO pages (title) VALUES (?)", [self.title]
 
-    def validate(self):
+    def validate(self, db):
         if not self.title:
             return False
 
         if self.id:
-            title_matches = self.select("WHERE title = ? AND id != ?",
+            title_matches = self.select(db, "WHERE title = ? AND id != ?",
                                         [self.title, self.id])
         else:
-            title_matches = self.select("WHERE title = ?", [self.title])
+            title_matches = self.select(db, "WHERE title = ?", [self.title])
 
         if title_matches:
             return False
@@ -235,7 +226,7 @@ class Page(DBObject):
     def history(self):
         if self._history is None and self.id:
             self._history = PageVersion.select(
-                "WHERE page_id = ? ORDER BY saved_at", [self.id])
+                db, "WHERE page_id = ? ORDER BY saved_at", [self.id])
 
         return self._history
 
@@ -273,10 +264,10 @@ class PageVersion(DBObject):
             self.page_id, self.body, self.user_id, self.saved_at
         ]
 
-    def before_save(self):
+    def before_save(self, db=None):
         self.saved_at = datetime.now()
 
-    def validate(self):
+    def validate(self, db=None):
         if not (self.body and self.page_id):
             return False
         return True
