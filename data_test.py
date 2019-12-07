@@ -1,4 +1,4 @@
-from data import Database, DBObject
+from data import DBObject
 import pytest
 
 
@@ -32,11 +32,10 @@ class Widget(DBObject):
         return True
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def db():
-    database = Database(":memory:")
-    database.create_table(Widget)
-    return database
+    DBObject.set_database(":memory:")
+    Widget.create_table()
 
 
 def test_creating_widget():
@@ -45,33 +44,32 @@ def test_creating_widget():
     assert widget.name == "Test"
 
 
-def test_saving_widget_to_db(db):
+def test_saving_widget_to_db():
     widget = Widget(name="Test")
-    db.save(widget)
+    widget.save()
     assert widget.id is not None
 
 
-def test_invalid_widget_cannot_be_saved(db):
+def test_invalid_widget_cannot_be_saved():
     widget = Widget()
-    was_saved = db.save(widget)
+    was_saved = widget.save()
     assert not was_saved
     assert widget.id is None
 
 
-def test_retrieving_widget_from_db(db):
+def test_retrieving_widget_from_db():
     widget = Widget(name="Test")
-    db.save(widget)
+    widget.save()
 
-    widgets = db.select(Widget, "WHERE id = ?", [widget.id])
+    widgets = Widget.select("WHERE id = ?", [widget.id])
     assert widgets[0].id == widget.id
     assert widgets[0].name == widget.name
 
 
-def test_deleting_widget_from_db(db):
+def test_deleting_widget_from_db():
     widget = Widget(name="Test")
-    db.save(widget)
+    widget.save()
+    widget.delete()
 
-    db.delete(widget)
-
-    widgets = db.select(Widget, "WHERE id = ?", [widget.id])
+    widgets = Widget.select("WHERE id = ?", [widget.id])
     assert widgets == []
