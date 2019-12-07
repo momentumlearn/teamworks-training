@@ -18,7 +18,7 @@ class DBObject:
     def set_database(cls, database_uri):
         """
         Establish a connection to the database. We set the
-        row_factory in order to get back dict-like objects from 
+        row_factory in order to get back dict-like objects from
         the database.
         """
         cls.con = sqlite3.connect(database_uri)
@@ -60,7 +60,7 @@ class DBObject:
     @classmethod
     def create_table_sql(cls):
         """
-        Implement this in order to generate the CREATE TABLE statement 
+        Implement this in order to generate the CREATE TABLE statement
         needed to make your database table.
         """
         raise NotImplementedError
@@ -183,3 +183,98 @@ class DBObject:
         Override this for any after-delete actions.
         """
         pass
+
+
+class Page(DBObject):
+    """
+    A Page is one individual page in our wiki.
+    The content of the page is held in the page history.
+    """
+
+    table_name = "pages"
+
+    @classmethod
+    def create_table_sql(cls):
+        return """
+        CREATE TABLE IF NOT EXISTS pages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT UNIQUE
+        )
+        """
+
+    def __init__(self, id=None, title=None, history=None):
+        super().__init__()
+        self.id = id
+        self.title = title
+        self._history = history
+
+    def save_sql(self):
+        if self.id:
+            return "UPDATE pages SET title = ? WHERE id = ?", [
+                self.title, self.id
+            ]
+
+        return "INSERT INTO pages (title) VALUES (?)", [self.title]
+
+    def validate(self):
+        if not self.title:
+            return False
+
+        if self.id:
+            title_matches = self.select("WHERE title = ? AND id != ?",
+                                        [self.title, self.id])
+        else:
+            title_matches = self.select("WHERE title = ?", [self.title])
+
+        if title_matches:
+            return False
+
+        return True
+
+    @property
+    def history(self):
+        if self._history is None and self.id:
+            self._history = PageVersion.select(
+                "WHERE page_id = ? ORDER BY saved_at", [self.id])
+
+        return self._history
+
+
+class PageVersion(DBObject):
+    table_name = 'page_versions'
+
+    @classmethod
+    def create_table_sql(cls):
+        return """
+        CREATE TABLE IF NOT EXISTS page_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_id INTEGER REFERENCES pages(id),
+            body TEXT,
+            saved_at TIMESTAMP
+        )
+        """
+
+    def __init__(self, page_id=None, id=None, body=None, saved_at=None):
+        super().__init__()
+        self.id = id
+        self.page_id = page_id
+        self.body = body
+        self.saved_at = saved_at
+
+    def save_sql(self):
+        if self.id:
+            return "UPDATE page_versions SET page_id = ?, body = ?, saved_at = ? WHERE id = ?", [
+                self.page_id, self.body, self.saved_at, self.id
+            ]
+
+        return "INSERT INTO page_versions (page_id, body, saved_at) VALUES (?, ?, ?)", [
+            self.page_id, self.body, self.saved_at
+        ]
+
+    def before_save(self):
+        self.saved_at = datetime.now()
+
+    def validate(self):
+        if not (self.body and self.page_id):
+            return False
+        return True
