@@ -132,7 +132,7 @@ class DBObject:
                 self.con.execute(sql, params)
             self.after_save()
 
-    def delete_sql(self):
+    def delete_sql(self, db=None):
         """
         Override this in order to generate the SQL you need to
         delete your record from your database. This should return a
