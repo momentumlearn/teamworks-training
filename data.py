@@ -1,6 +1,6 @@
 import sqlite3
 from datetime import datetime
-
+from passwords import hash_password
 
 class DBObject:
     """
@@ -250,25 +250,27 @@ class PageVersion(DBObject):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             page_id INTEGER REFERENCES pages(id),
             body TEXT,
+            user_id INTEGER REFERENCES users(id) NULL,
             saved_at TIMESTAMP
         )
         """
 
-    def __init__(self, page_id=None, id=None, body=None, saved_at=None):
+    def __init__(self, page_id=None, id=None, body=None, user_id=None, saved_at=None):
         super().__init__()
         self.id = id
         self.page_id = page_id
         self.body = body
         self.saved_at = saved_at
+        self.user_id = user_id
 
     def save_sql(self):
         if self.id:
-            return "UPDATE page_versions SET page_id = ?, body = ?, saved_at = ? WHERE id = ?", [
-                self.page_id, self.body, self.saved_at, self.id
+            return "UPDATE page_versions SET page_id = ?, body = ?, saved_at = ?, user_id = ? WHERE id = ?", [
+                self.page_id, self.body, self.saved_at, self.user_id, self.id
             ]
 
-        return "INSERT INTO page_versions (page_id, body, saved_at) VALUES (?, ?, ?)", [
-            self.page_id, self.body, self.saved_at
+        return "INSERT INTO page_versions (page_id, body, user_id, saved_at) VALUES (?, ?, ?, ?)", [
+            self.page_id, self.body, self.user_id, self.saved_at
         ]
 
     def before_save(self):
@@ -277,4 +279,51 @@ class PageVersion(DBObject):
     def validate(self):
         if not (self.body and self.page_id):
             return False
+        return True
+
+class User(DBObject):
+    table_name = "users"
+
+    @classmethod
+    def create_table_sql(cls):
+        return """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            encrypted_password TEXT
+        )
+        """
+
+    def __init__(self, id=None, username=None, encrypted_password=None):
+        super().__init__()
+        self.id = id
+        self.username = username
+        self.encrypted_password = encrypted_password
+        self.password = None
+
+    def before_save(self, db=None):
+        if self.password:
+            self.encrypted_password = hash_password(self.password)
+
+    def save_sql(self):
+        if self.id:
+            return "UPDATE users SET username = ?, encrypted_password = ? WHERE id = ?", [
+                self.username, self.encrypted_password, self.id
+            ]
+
+        return "INSERT INTO pages (username, encrypted_password) VALUES (?, ?)", [self.username, self.encrypted_password]
+
+    def validate(self, db):
+        if not self.username:
+            return False
+
+        if self.id:
+            username_matches = self.select(db, "WHERE username = ? AND id != ?",
+                                        [self.username, self.id])
+        else:
+            username_matches = self.select(db, "WHERE username = ?", [self.username])
+
+        if username_matches:
+            return False
+
         return True
