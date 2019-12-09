@@ -39,7 +39,7 @@ def page_list():
 @app.route("/pages/<title>/", methods=['GET', 'PUT', 'DELETE'])
 def page_detail(title):
     db = get_db()
-    page = Page.select(db, "WHERE title = ?", [title])[0]
+    page = Page.get_by_title(db, title)
     if page:
         if request.method == "PUT":
             return update_page(request, page)
