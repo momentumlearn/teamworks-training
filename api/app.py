@@ -1,9 +1,13 @@
 import sqlite3
-from data import DBObject, Page, PageVersion
+from pathlib import Path
+
 from flask import Flask, g, request
+
+from .data import DBObject, Page, PageVersion
+
 app = Flask(__name__)
 
-DATABASE = 'wiki.sqlite3'
+DATABASE = Path(__file__).parent / 'wiki.sqlite3'
 
 
 def get_db():

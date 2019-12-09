@@ -1,6 +1,8 @@
-from data import DBObject
-import pytest
 import sqlite3
+
+import pytest
+
+from .data import DBObject
 
 
 class Widget(DBObject):

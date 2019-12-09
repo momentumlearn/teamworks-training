@@ -1,7 +1,8 @@
 import sqlite3
 from datetime import datetime
-from passwords import hash_password
 from pathlib import Path
+
+from .passwords import hash_password
 
 
 class DBObject:
@@ -375,7 +376,7 @@ def load_pages(db_path):
     PageVersion.create_table(db, recreate=True)
     Page.create_table(db, recreate=True)
 
-    pages_dir = Path(__file__).parent / 'pages'
+    pages_dir = Path(__file__).parent / '..' / 'pages'
     pages = pages_dir.glob("*.md")
     for page_path in pages:
         with open(page_path, 'r') as file:
