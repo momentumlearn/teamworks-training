@@ -2,7 +2,7 @@ import sqlite3
 
 import click
 from flask import current_app, g
-from .data import Page, PageVersion
+from .data import Page, PageVersion, User
 
 
 def get_db():
@@ -28,6 +28,7 @@ def init_db():
     db = get_db()
     Page.create_table(db)
     PageVersion.create_table(db)
+    User.create_table(db)
 
 
 def init_app(app):
