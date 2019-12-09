@@ -4,15 +4,7 @@ from pathlib import Path
 from flask import Flask, g, request, current_app
 
 from .data import DBObject, Page, PageVersion
-
-
-def get_db():
-    """
-    Establish a per-thread connection to the database.
-    """
-    if 'db' not in g:
-        g.db = sqlite3.connect(current_app.config['DATABASE'])
-    return g.db
+from .db import init_app as db_init_app, get_db
 
 
 def create_app():
@@ -22,9 +14,7 @@ def create_app():
         SECRET_KEY='dev', DATABASE=Path(__file__).parent / 'wiki.sqlite3')
 
     with app.app_context():
-        db = get_db()
-        Page.create_table(db)
-        PageVersion.create_table(db)
+        db_init_app(app)
 
     @app.route("/pages/", methods=['GET', 'POST'])
     def page_list():
