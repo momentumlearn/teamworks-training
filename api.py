@@ -36,12 +36,15 @@ def page_list():
         }
 
 
-@app.route("/pages/<title>/")
+@app.route("/pages/<title>/", methods=['GET', 'PUT', 'DELETE'])
 def page_detail(title):
     db = get_db()
     page = Page.select(db, "WHERE title = ?", [title])[0]
     if page:
-        return page.with_history(db).to_dict()
+        if request.method == "PUT":
+            return update_page(request, page)
+        else:
+            return page.with_history(db).to_dict()
     else:
         return '', 404
 
@@ -54,3 +57,14 @@ def create_page(request):
         return ({"errors": page.errors}, 422)
     else:
         return page.with_history(db).to_dict(), 201
+
+
+def update_page(request, page):
+    data = request.get_json()
+    if data.get('title'):
+        page.title = data.get('title')
+        page.save(get_db())
+    if data.get('body'):
+        page.add_version(get_db(), data.get('body'))
+
+    return page.with_history(get_db()).to_dict()
