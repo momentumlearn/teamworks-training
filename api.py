@@ -43,6 +43,8 @@ def page_detail(title):
     if page:
         if request.method == "PUT":
             return update_page(request, page)
+        elif request.method == "DELETE":
+            return delete_page(request, page)
         else:
             return page.with_history(db).to_dict()
     else:
@@ -68,3 +70,8 @@ def update_page(request, page):
         page.add_version(get_db(), data.get('body'))
 
     return page.with_history(get_db()).to_dict()
+
+
+def delete_page(request, page):
+    page.delete(get_db())
+    return "", 204
