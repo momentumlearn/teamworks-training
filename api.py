@@ -27,14 +27,7 @@ def page_list():
     db = get_db()
 
     if request.method == 'POST':
-        data = request.get_json()
-        page = Page.create_with_body(
-            db, title=data.get('title'), body=data.get('body'))
-        if page.errors:
-            return ({"errors": page.errors}, 422)
-        else:
-            return page.with_history(db).to_dict(), 201
-
+        return create_page(request)
     else:
         return {
             "pages": [
@@ -51,3 +44,13 @@ def page_detail(title):
         return page.with_history(db).to_dict()
     else:
         return '', 404
+
+
+def create_page(request):
+    data = request.get_json()
+    page = Page.create_with_body(
+        db, title=data.get('title'), body=data.get('body'))
+    if page.errors:
+        return ({"errors": page.errors}, 422)
+    else:
+        return page.with_history(db).to_dict(), 201
