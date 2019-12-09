@@ -200,6 +200,7 @@ class Page(DBObject):
         self.id = id
         self.title = title
         self.history = None
+        self.errors = []
 
     def save_sql(self):
         if self.id:
@@ -210,7 +211,9 @@ class Page(DBObject):
         return "INSERT INTO pages (title) VALUES (?)", [self.title]
 
     def validate(self, db):
+        self.errors = []
         if not self.title:
+            self.errors.append(["title", "title is required"])
             return False
 
         if self.id:
@@ -220,6 +223,7 @@ class Page(DBObject):
             title_matches = self.select(db, "WHERE title = ?", [self.title])
 
         if title_matches:
+            self.errors.append(["title", "title must be unique"])
             return False
 
         return True

@@ -1,6 +1,6 @@
 import sqlite3
 from data import DBObject, Page, PageVersion
-from flask import Flask, g
+from flask import Flask, g, request
 app = Flask(__name__)
 
 DATABASE = 'wiki.sqlite3'
@@ -22,15 +22,27 @@ with app.app_context():
     PageVersion.create_table(db)
 
 
-@app.route("/pages/")
+@app.route("/pages/", methods=['GET', 'POST'])
 def page_list():
     db = get_db()
-    return {
-        "pages": [page.with_history(db).to_dict() for page in Page.select(db)]
-    }
+
+    if request.method == 'POST':
+        data = request.get_json()
+        page = Page(title=data.get('title'))
+        if page.validate(db):
+            page.save(db)
+            return page.to_dict(), 201
+        else:
+            return {"errors": page.errors}, 422
+    else:
+        return {
+            "pages": [
+                page.with_history(db).to_dict() for page in Page.select(db)
+            ]
+        }
 
 
-@app.route("/pages/<title>")
+@app.route("/pages/<title>/")
 def page_detail(title):
     db = get_db()
     page = Page.select(db, "WHERE title = ?", [title])[0]
