@@ -1,6 +1,8 @@
 import sqlite3
 from datetime import datetime
 from passwords import hash_password
+from pathlib import Path
+
 
 class DBObject:
     """
@@ -20,7 +22,7 @@ class DBObject:
         Create a table for the DBObject.
         """
         if recreate:
-            cls.drop_table()
+            cls.drop_table(db)
         with db:
             db.execute(cls.create_table_sql())
 
@@ -197,7 +199,6 @@ class Page(DBObject):
         super().__init__()
         self.id = id
         self.title = title
-        self._history = history
 
     def save_sql(self):
         if self.id:
@@ -222,13 +223,8 @@ class Page(DBObject):
 
         return True
 
-    @property
-    def history(self):
-        if self._history is None and self.id:
-            self._history = PageVersion.select(
-                db, "WHERE page_id = ? ORDER BY saved_at", [self.id])
-
-        return self._history
+    def to_dict(self):
+        return {"id": self.id, "title": self.title}
 
 
 class PageVersion(DBObject):
@@ -246,7 +242,12 @@ class PageVersion(DBObject):
         )
         """
 
-    def __init__(self, page_id=None, id=None, body=None, user_id=None, saved_at=None):
+    def __init__(self,
+                 page_id=None,
+                 id=None,
+                 body=None,
+                 user_id=None,
+                 saved_at=None):
         super().__init__()
         self.id = id
         self.page_id = page_id
@@ -271,6 +272,7 @@ class PageVersion(DBObject):
         if not (self.body and self.page_id):
             return False
         return True
+
 
 class User(DBObject):
     table_name = "users"
@@ -302,7 +304,9 @@ class User(DBObject):
                 self.username, self.encrypted_password, self.id
             ]
 
-        return "INSERT INTO pages (username, encrypted_password) VALUES (?, ?)", [self.username, self.encrypted_password]
+        return "INSERT INTO pages (username, encrypted_password) VALUES (?, ?)", [
+            self.username, self.encrypted_password
+        ]
 
     def validate(self, db):
         if not self.username:
@@ -310,11 +314,30 @@ class User(DBObject):
 
         if self.id:
             username_matches = self.select(db, "WHERE username = ? AND id != ?",
-                                        [self.username, self.id])
+                                           [self.username, self.id])
         else:
-            username_matches = self.select(db, "WHERE username = ?", [self.username])
+            username_matches = self.select(db, "WHERE username = ?",
+                                           [self.username])
 
         if username_matches:
             return False
 
         return True
+
+
+def load_pages(db_path):
+    db = sqlite3.connect(db_path)
+    PageVersion.create_table(db, recreate=True)
+    Page.create_table(db, recreate=True)
+
+    pages_dir = Path(__file__).parent / 'pages'
+    pages = pages_dir.glob("*.md")
+    for page_path in pages:
+        with open(page_path, 'r') as file:
+            title = file.readline().strip()
+            body = file.read().strip()
+            print(title)
+            page = Page(title=title)
+            page.save(db)
+            version = PageVersion(body=body, page_id=page.id)
+            version.save(db)
