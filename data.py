@@ -199,6 +199,7 @@ class Page(DBObject):
         super().__init__()
         self.id = id
         self.title = title
+        self.history = None
 
     def save_sql(self):
         if self.id:
@@ -223,8 +224,17 @@ class Page(DBObject):
 
         return True
 
+    def with_history(self, db):
+        self.history = PageVersion.select(
+            db, "WHERE page_id = ? ORDER BY saved_at DESC", [self.id])
+        return self
+
     def to_dict(self):
-        return {"id": self.id, "title": self.title}
+        retval = {"id": self.id, "title": self.title}
+        if self.history:
+            retval['body'] = self.history[0].body
+            retval['updated_at'] = self.history[0].saved_at
+        return retval
 
 
 class PageVersion(DBObject):

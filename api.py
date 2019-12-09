@@ -24,28 +24,17 @@ with app.app_context():
 
 @app.route("/pages/")
 def page_list():
-    pages = [page.to_dict() for page in Page.select(get_db())]
-    for page in pages:
-        last_version = PageVersion.select(
-            get_db(), "WHERE page_id = ? ORDER BY saved_at DESC LIMIT 1",
-            [page['id']])
-        if last_version[0]:
-            page['body'] = last_version[0].body
-            page['last_updated_at'] = last_version[0].saved_at
-    return {"pages": pages}
+    db = get_db()
+    return {
+        "pages": [page.with_history(db).to_dict() for page in Page.select(db)]
+    }
 
 
 @app.route("/pages/<title>")
 def page_detail(title):
-    page = Page.select(get_db(), "WHERE title = ?", [title])[0]
+    db = get_db()
+    page = Page.select(db, "WHERE title = ?", [title])[0]
     if page:
-        page = page.to_dict()
-        last_version = PageVersion.select(
-            get_db(), "WHERE page_id = ? ORDER BY saved_at DESC LIMIT 1",
-            [page['id']])
-        if last_version[0]:
-            page['body'] = last_version[0].body
-            page['last_updated_at'] = last_version[0].saved_at
-        return page
+        return page.with_history(db).to_dict()
     else:
         return '', 404
