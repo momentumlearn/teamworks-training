@@ -246,6 +246,13 @@ class Page(DBObject):
             db, "WHERE page_id = ? ORDER BY saved_at DESC", [self.id])
         return self
 
+    def add_version(self, db, body):
+        version = PageVersion(body=body, page_id=self.id)
+        version.save(db)
+        if self.history:
+            self.history.insert(0, version)
+        return version
+
     def to_dict(self):
         retval = {"id": self.id, "title": self.title}
         if self.history:
