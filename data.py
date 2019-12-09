@@ -253,6 +253,11 @@ class Page(DBObject):
             self.history.insert(0, version)
         return version
 
+    def before_delete(self, db):
+        sql = f"DELETE FROM {PageVersion.table_name} WHERE page_id = ?"
+        with db:
+            db.execute(sql, [self.id])
+
     def to_dict(self):
         retval = {"id": self.id, "title": self.title}
         if self.history:
