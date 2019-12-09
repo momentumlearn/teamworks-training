@@ -1,4 +1,4 @@
-from flask import Blueprint, g, request
+from flask import Blueprint, request
 
 from .data import Page
 from .db import get_db

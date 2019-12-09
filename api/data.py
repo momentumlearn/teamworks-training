@@ -220,7 +220,6 @@ class Page(DBObject):
         self.id = id
         self.title = title
         self.history = None
-        self.errors = []
 
     def save_sql(self):
         if self.id:
@@ -333,12 +332,16 @@ class User(DBObject):
         )
         """
 
-    def __init__(self, id=None, username=None, encrypted_password=None):
+    def __init__(self,
+                 id=None,
+                 username=None,
+                 password=None,
+                 encrypted_password=None):
         super().__init__()
         self.id = id
         self.username = username
         self.encrypted_password = encrypted_password
-        self.password = None
+        self.password = password
 
     def before_save(self, db=None):
         if self.password:
@@ -350,12 +353,15 @@ class User(DBObject):
                 self.username, self.encrypted_password, self.id
             ]
 
-        return "INSERT INTO pages (username, encrypted_password) VALUES (?, ?)", [
+        return "INSERT INTO users (username, encrypted_password) VALUES (?, ?)", [
             self.username, self.encrypted_password
         ]
 
     def validate(self, db):
+        self.errors = []
+
         if not self.username:
+            self.errors.append(['username', 'username is required'])
             return False
 
         if self.id:
@@ -366,6 +372,11 @@ class User(DBObject):
                                            [self.username])
 
         if username_matches:
+            self.errors.append(['username', 'username must be unique'])
+            return False
+
+        if not self.password and not self.encrypted_password:
+            self.errors.append(['password', 'password is required'])
             return False
 
         return True

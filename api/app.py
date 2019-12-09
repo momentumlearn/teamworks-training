@@ -16,7 +16,8 @@ def create_app():
         from . import db
         db.init_app(app)
 
-    from . import pages
+    from . import pages, auth
     app.register_blueprint(pages.bp)
+    app.register_blueprint(auth.bp)
 
     return app
