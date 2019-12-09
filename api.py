@@ -28,12 +28,13 @@ def page_list():
 
     if request.method == 'POST':
         data = request.get_json()
-        page = Page(title=data.get('title'))
-        if page.validate(db):
-            page.save(db)
-            return page.to_dict(), 201
+        page = Page.create_with_body(
+            db, title=data.get('title'), body=data.get('body'))
+        if page.errors:
+            return ({"errors": page.errors}, 422)
         else:
-            return {"errors": page.errors}, 422
+            return page.with_history(db).to_dict(), 201
+
     else:
         return {
             "pages": [

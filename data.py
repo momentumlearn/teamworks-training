@@ -195,6 +195,19 @@ class Page(DBObject):
         )
         """
 
+    @classmethod
+    def create_with_body(cls, db, title, body):
+        page = cls()
+        page = cls(title=title)
+        if page.validate(db) and body:
+            page.save(db)
+            version = PageVersion(body=body, page_id=page.id)
+            version.save(db)
+        elif not body:
+            page.errors.append(["body", "page must contain a body"])
+
+        return page
+
     def __init__(self, id=None, title=None, history=None):
         super().__init__()
         self.id = id
