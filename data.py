@@ -208,6 +208,12 @@ class Page(DBObject):
 
         return page
 
+    @classmethod
+    def get_by_title(cls, db, title):
+        pages = cls.select(db, "WHERE title = ?", [title])
+        if pages:
+            return pages[0]
+
     def __init__(self, id=None, title=None, history=None):
         super().__init__()
         self.id = id
