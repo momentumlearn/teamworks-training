@@ -237,3 +237,10 @@ class Page(DBObject):
 
     def before_save(self, db=None):
         self.updated_at = datetime.datetime.now()
+
+
+# Exercise: create a User class. Users should have a username and password.
+# Passwords shouldn't be in cleartext, but try that first. If you get through that,
+# change it to have an encrypted password.
+# Before save, if there’s a password field set, encrypt the password using the
+# function hash_password from passwords.py.
