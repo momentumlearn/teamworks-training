@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from passwords import hash_password
+from uuid import uuid4
 
 
 class DBObject:
@@ -123,7 +124,7 @@ class DBObject:
             sql, params = self.delete_sql(db)
             with db:
                 db.execute(sql, params)
-            self.after_save(db)
+            self.after_delete(db)
 
     def delete_sql(self, db=None):
         """
@@ -188,29 +189,39 @@ class Page(DBObject):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             body TEXT,
             title TEXT UNIQUE,
+            updated_by INTEGER REFERENCES users(id) NULL,
             updated_at DATETIME
         )
         """
 
-    def __init__(self, id=None, title=None, body=None, updated_at=None):
+    def __init__(self,
+                 id=None,
+                 title=None,
+                 body=None,
+                 updated_by=None,
+                 updated_at=None):
         super().__init__()
         self.id = id
         self.title = title
         self.body = body
+        self.updated_by = updated_by
         self.updated_at = updated_at
 
     def save_sql(self):
         if self.id:
-            sql = "UPDATE pages SET title = ?, body = ? WHERE id = ?"
-            return (sql, [self.title, self.body, self.id])
-        sql = "INSERT INTO PAGES (title, body) VALUES (?, ?)"
-        return (sql, [self.title, self.body])
+            sql = "UPDATE pages SET title = ?, body = ?, updated_at = ?, updated_by = ? WHERE id = ?"
+            return (sql, [
+                self.title, self.body, self.updated_at, self.updated_by, self.id
+            ])
+        sql = "INSERT INTO PAGES (title, body, updated_at, updated_by) VALUES (?, ?, ?, ?)"
+        return (sql, [self.title, self.body, self.updated_at, self.updated_by])
 
     def to_dict(self):
         return {
             "id": self.id,
             "title": self.title,
             "body": self.body,
+            "updated_by": self.updated_by,
             "updated_at": self.updated_at
         }
 
@@ -254,30 +265,48 @@ class User(DBObject):
     def create_table_sql(cls):
         return """
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER AUTOINCREMENT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
-            encrypted_password TEXT
+            encrypted_password TEXT,
+            token TEXT
         )
         """
 
-    def __init__(self, id=None, username=None, encrypted_password=None):
+    @classmethod
+    def get_by_token(cls, db, token):
+        users = cls.select(db, "WHERE token = ?", [token])
+        if not users:
+            return None
+        else:
+            return users[0]
+
+    def __init__(self,
+                 id=None,
+                 username=None,
+                 encrypted_password=None,
+                 token=None):
         super().__init__()
         self.id = id
         self.username = username
         self.encrypted_password = encrypted_password
+        self.token = token
 
     def set_password(self, password):
         self.encrypted_password = hash_password(password)
 
     def save_sql(self):
         if self.id:
-            return "UPDATE users SET username = ?, encrypted_password = ? WHERE id = ?", [
-                self.username, self.encrypted_password, self.id
+            return "UPDATE users SET username = ?, encrypted_password = ?, token = ? WHERE id = ?", [
+                self.username, self.encrypted_password, self.token, self.id
             ]
 
-        return "INSERT INTO users (username, encrypted_password) VALUES (?, ?)", [
-            self.username, self.encrypted_password
+        return "INSERT INTO users (username, encrypted_password, token) VALUES (?, ?, ?)", [
+            self.username, self.encrypted_password, self.token
         ]
+
+    def before_save(self, db):
+        if not self.token:
+            self.token = str(uuid4())
 
     def validate(self, db):
         self.errors = []
@@ -302,6 +331,9 @@ class User(DBObject):
             return False
 
         return True
+
+    def to_dict(self):
+        return {"username": self.username, "token": self.token}
 
 
 def load_pages(db_path):
