@@ -244,3 +244,18 @@ class Page(DBObject):
 # change it to have an encrypted password.
 # Before save, if there’s a password field set, encrypt the password using the
 # function hash_password from passwords.py.
+
+
+def load_pages(db_path):
+    db = sqlite3.connect(db_path)
+    Page.create_table(db, recreate=True)
+
+    pages_dir = Path(__file__).parent / 'pages'
+    pages = pages_dir.glob("*.md")
+    for page_path in pages:
+        with open(page_path, 'r') as file:
+            title = file.readline().strip()
+            body = file.read().strip()
+            print(title)
+            page = Page(title=title, body=body)
+            page.save(db)
