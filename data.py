@@ -236,7 +236,7 @@ class Page(DBObject):
         return True
 
     def before_save(self, db=None):
-        self.updated_at = datetime.datetime.now()
+        self.updated_at = datetime.now()
 
 
 # Exercise: create a User class. Users should have a username and password.
@@ -248,7 +248,7 @@ class Page(DBObject):
 
 def load_pages(db_path):
     db = sqlite3.connect(db_path)
-    Page.create_table(db, recreate=True)
+    Page.create_table(db)
 
     pages_dir = Path(__file__).parent / 'pages'
     pages = pages_dir.glob("*.md")
