@@ -25,6 +25,8 @@
 
 ## Day 1 - Python
 
+* [Jupyter notebooks](notebooks/)
+
 ## Day 2 - React
 
 ## Day 3 - React
