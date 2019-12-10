@@ -34,4 +34,17 @@ def check_wiki_link(candidate):
 # camel-cased word like NameOfPage. Create a new function check_wiki_word(text).
 # It should follow the same rules as check_wiki_link(text).
 def check_wiki_word(candidate):
-    pass
+    if not candidate.isalnum() or len(candidate) < 2:
+        return None
+
+    if not candidate[0].isupper():
+        return None
+
+    if not (any([char.isupper() for char in candidate[1:]]) and
+            any([char.islower() for char in candidate[1:]])):
+        return None
+
+    return {
+        "label": candidate,
+        "target": candidate,
+    }
