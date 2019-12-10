@@ -9,6 +9,7 @@ verify_ssl = true
 pytest = "*"
 jupyter = "*"
 ipython = "*"
+flask = "*"
 
 [requires]
 python_version = "3.7"

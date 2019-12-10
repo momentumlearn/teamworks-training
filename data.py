@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from passwords import hash_password
 
 
 class DBObject:
@@ -244,6 +245,63 @@ class Page(DBObject):
 # change it to have an encrypted password.
 # Before save, if there’s a password field set, encrypt the password using the
 # function hash_password from passwords.py.
+
+
+class User(DBObject):
+    table_name = 'users'
+
+    @classmethod
+    def create_table_sql(cls):
+        return """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER AUTOINCREMENT PRIMARY KEY,
+            username TEXT UNIQUE,
+            encrypted_password TEXT
+        )
+        """
+
+    def __init__(self, id=None, username=None, encrypted_password=None):
+        super().__init__()
+        self.id = id
+        self.username = username
+        self.encrypted_password = encrypted_password
+
+    def set_password(self, password):
+        self.encrypted_password = hash_password(password)
+
+    def save_sql(self):
+        if self.id:
+            return "UPDATE users SET username = ?, encrypted_password = ? WHERE id = ?", [
+                self.username, self.encrypted_password, self.id
+            ]
+
+        return "INSERT INTO users (username, encrypted_password) VALUES (?, ?)", [
+            self.username, self.encrypted_password
+        ]
+
+    def validate(self, db):
+        self.errors = []
+
+        if not self.username:
+            self.errors.append(['username', 'username is required'])
+            return False
+
+        if self.id:
+            username_matches = self.select(db, "WHERE username = ? AND id != ?",
+                                           [self.username, self.id])
+        else:
+            username_matches = self.select(db, "WHERE username = ?",
+                                           [self.username])
+
+        if username_matches:
+            self.errors.append(['username', 'username must be unique'])
+            return False
+
+        if not self.encrypted_password:
+            self.errors.append(['password', 'password is required'])
+            return False
+
+        return True
 
 
 def load_pages(db_path):
