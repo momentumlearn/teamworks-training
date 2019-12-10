@@ -185,6 +185,55 @@ class Page(DBObject):
         return """
         CREATE TABLE IF NOT EXISTS pages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT UNIQUE
+            body TEXT,
+            title TEXT UNIQUE,
+            updated_at DATETIME
         )
         """
+
+    def __init__(self, id=None, title=None, body=None, updated_at=None):
+        super().__init__()
+        self.id = id
+        self.title = title
+        self.body = body
+        self.updated_at = updated_at
+
+    def save_sql(self):
+        if self.id:
+            sql = "UPDATE pages SET title = ?, body = ? WHERE id = ?"
+            return (sql, [self.title, self.body, self.id])
+        sql = "INSERT INTO PAGES (title, body) VALUES (?, ?)"
+        return (sql, [self.title, self.body])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "body": self.body,
+            "updated_at": self.updated_at
+        }
+
+    def validate(self, db=None):
+        self.errors = []
+        if not self.title:
+            self.errors.append(["title", "is required"])
+            return False
+
+        if not self.body:
+            self.errors.append(["body", "is required"])
+            return False
+
+        if self.id:
+            title_matches = self.select(db, "WHERE title = ? AND id != ?",
+                                        [self.title, self.id])
+        else:
+            title_matches = self.select(db, "WHERE title = ?", [self.title])
+
+        if title_matches:
+            self.errors.append(["title", "must be unique"])
+            return False
+
+        return True
+
+    def before_save(self, db=None):
+        self.updated_at = datetime.datetime.now()
