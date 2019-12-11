@@ -1,4 +1,7 @@
 import moment from 'moment'
+import React from 'react'
+import ReactDOM from 'react-dom'
+import PageList from './components/PageList'
 
 const pages = [
   {
@@ -31,40 +34,7 @@ const pages = [
   }
 ]
 
-function toggleWikiBody (listItem, body) {
-  if (!listItem.dataset.open) {
-    const bodyNode = document.createElement('pre')
-    const bodyText = document.createTextNode(body)
-    bodyNode.appendChild(bodyText)
-    listItem.appendChild(bodyNode)
-    listItem.dataset.open = true
-  } else {
-    const bodyNode = listItem.querySelector('pre')
-    bodyNode.remove()
-    listItem.dataset.open = ''
-  }
-}
-
-function displayWikiTitles () {
-  const list = document.createElement('ul')
-  for (const page of pages) {
-    const listItem = document.createElement('li')
-    const strongEl = document.createElement('strong')
-    const text = document.createTextNode(page.title)
-    const updatedAt = moment(page.updated_at).fromNow()
-    const updatedText = document.createTextNode(updatedAt)
-    listItem.addEventListener('click', function (event) {
-      toggleWikiBody(listItem, page.body)
-    })
-    strongEl.appendChild(text)
-    listItem.appendChild(strongEl)
-    listItem.appendChild(document.createTextNode(' '))
-    listItem.appendChild(updatedText)
-    list.appendChild(listItem)
-  }
-
-  const main = document.getElementById('main')
-  main.appendChild(list)
-}
-
-displayWikiTitles()
+ReactDOM.render(
+  <PageList pages={pages} />,
+  document.getElementById('main')
+)
