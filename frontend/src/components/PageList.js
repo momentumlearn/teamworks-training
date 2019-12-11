@@ -1,9 +1,12 @@
 import React from 'react'
+import PageListItem from './PageListItem'
 
 class PageList extends React.Component {
   render () {
     return (
-      <pre>{this.props.pages[0].title}</pre>
+      <ul>
+        {this.props.pages.map((page) => <PageListItem page={page} />)}
+      </ul>
     )
   }
 }
