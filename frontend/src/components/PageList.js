@@ -5,7 +5,7 @@ class PageList extends React.Component {
   render () {
     return (
       <ul>
-        {this.props.pages.map((page) => <PageListItem page={page} />)}
+        {this.props.pages.map((page) => <PageListItem page={page} open />)}
       </ul>
     )
   }
