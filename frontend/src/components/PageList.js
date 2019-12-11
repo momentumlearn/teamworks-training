@@ -6,13 +6,16 @@ class PageList extends React.Component {
     return (
       <div id='PageList'>
         <ul>
-          {this.props.pages.map((page) => (
-            <PageListItem
-              key={page.id}
-              page={page}
-              openPage={this.props.setPage}
-            />)
-          )}
+          {this.props.pages.length === 0
+            ? <li>Loading...</li>
+            : this.props.pages.map((page) => (
+              <PageListItem
+                key={page.id}
+                page={page}
+                openPage={this.props.setPage}
+              />)
+            )}
+
         </ul>
       </div>
     )
