@@ -23,5 +23,7 @@
   * Wrap up
 
 
-* [Jupyter notebooks](notebooks/)
+## Links
 
+* [Jupyter notebooks](notebooks/)
+* [How to set up React with Webpack](https://www.robinwieruch.de/minimal-react-webpack-babel-setup)
