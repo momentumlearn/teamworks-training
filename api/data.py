@@ -1,8 +1,9 @@
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
-from .passwords import hash_password
+from .passwords import hash_password, verify_password
 
 
 class DBObject:
@@ -197,12 +198,11 @@ class Page(DBObject):
         """
 
     @classmethod
-    def create_with_body(cls, db, title, body):
-        page = cls()
+    def create_with_body(cls, db, title, body, user_id=None):
         page = cls(title=title)
         if page.validate(db) and body:
             page.save(db)
-            version = PageVersion(body=body, page_id=page.id)
+            version = PageVersion(body=body, page_id=page.id, user_id=user_id)
             version.save(db)
         elif not body:
             page.errors.append(["body", "page must contain a body"])
@@ -252,8 +252,8 @@ class Page(DBObject):
             db, "WHERE page_id = ? ORDER BY saved_at DESC", [self.id])
         return self
 
-    def add_version(self, db, body):
-        version = PageVersion(body=body, page_id=self.id)
+    def add_version(self, db, body, user_id=None):
+        version = PageVersion(body=body, page_id=self.id, user_id=user_id)
         version.save(db)
         if self.history:
             self.history.insert(0, version)
@@ -269,6 +269,7 @@ class Page(DBObject):
         if self.history:
             retval['body'] = self.history[0].body
             retval['updated_at'] = self.history[0].saved_at
+            retval['updated_by'] = self.history[0].user_id
         return retval
 
 
@@ -328,33 +329,58 @@ class User(DBObject):
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
-            encrypted_password TEXT
+            encrypted_password TEXT,
+            token TEXT
         )
         """
+
+    @classmethod
+    def get_by_username(cls, db, username):
+        users = cls.select(db, "WHERE username = ?", [username])
+        if users:
+            return users[0]
+
+    @classmethod
+    def get_by_token(cls, db, token):
+        users = cls.select(db, "WHERE token = ?", [token])
+        if users:
+            return users[0]
 
     def __init__(self,
                  id=None,
                  username=None,
                  password=None,
-                 encrypted_password=None):
+                 encrypted_password=None,
+                 token=None):
         super().__init__()
         self.id = id
         self.username = username
         self.encrypted_password = encrypted_password
         self.password = password
+        self.token = token
+
+    def password_matches(self, password):
+        if not self.encrypted_password:
+            return False
+        return verify_password(self.encrypted_password, password)
 
     def before_save(self, db=None):
         if self.password:
             self.encrypted_password = hash_password(self.password)
+        self.set_token()
+
+    def set_token(self):
+        if not self.token:
+            self.token = str(uuid4())
 
     def save_sql(self):
         if self.id:
-            return "UPDATE users SET username = ?, encrypted_password = ? WHERE id = ?", [
-                self.username, self.encrypted_password, self.id
+            return "UPDATE users SET username = ?, encrypted_password = ?, token = ? WHERE id = ?", [
+                self.username, self.encrypted_password, self.token, self.id
             ]
 
-        return "INSERT INTO users (username, encrypted_password) VALUES (?, ?)", [
-            self.username, self.encrypted_password
+        return "INSERT INTO users (username, encrypted_password, token) VALUES (?, ?)", [
+            self.username, self.encrypted_password, self.token
         ]
 
     def validate(self, db):

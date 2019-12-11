@@ -1,7 +1,8 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, g
 
 from .data import Page
 from .db import get_db
+from .auth import login_required
 
 bp = Blueprint('pages', __name__, url_prefix='/pages')
 
@@ -35,6 +36,7 @@ def page_detail(title):
         return '', 404
 
 
+@login_required
 def create_page():
     data = request.get_json()
     db = get_db()
@@ -46,6 +48,7 @@ def create_page():
         return page.with_history(db).to_dict(), 201
 
 
+@login_required
 def update_page(page):
     data = request.get_json()
     db = get_db()
@@ -53,11 +56,12 @@ def update_page(page):
         page.title = data.get('title')
         page.save(db)
     if data.get('body'):
-        page.add_version(db, data.get('body'))
+        page.add_version(db, data.get('body'), user_id=g.user.id)
 
     return page.with_history(db).to_dict()
 
 
+@login_required
 def delete_page(page):
     page.delete(get_db())
     return "", 204
