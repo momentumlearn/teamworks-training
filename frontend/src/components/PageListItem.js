@@ -7,7 +7,7 @@ class PageListItem extends React.Component {
     const { page, open, openPage } = this.props
     return (
       <li>
-        <strong style={{ cursor: 'pointer' }} onClick={() => openPage(page.id)}>{page.title}</strong>{' '}
+        <strong style={{ cursor: 'pointer' }} onClick={() => openPage(page)}>{page.title}</strong>{' '}
         <span>{moment(page.updated_at).fromNow()}</span>
         {open && <ReactMarkdown source={page.body} />}
       </li>)
