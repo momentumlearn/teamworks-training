@@ -1,4 +1,4 @@
-from wiki import check_wiki_link, check_wiki_word
+from .wiki import check_wiki_link, check_wiki_word
 
 
 def test_bad_links():

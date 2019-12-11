@@ -1,8 +1,8 @@
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from passwords import hash_password
-from uuid import uuid4
+
+from .passwords import hash_password
 
 
 class DBObject:
@@ -124,7 +124,7 @@ class DBObject:
             sql, params = self.delete_sql(db)
             with db:
                 db.execute(sql, params)
-            self.after_delete(db)
+            self.after_save(db)
 
     def delete_sql(self, db=None):
         """
@@ -180,6 +180,11 @@ class DBObject:
 
 
 class Page(DBObject):
+    """
+    A Page is one individual page in our wiki.
+    The content of the page is held in the page history.
+    """
+
     table_name = "pages"
 
     @classmethod
@@ -187,52 +192,47 @@ class Page(DBObject):
         return """
         CREATE TABLE IF NOT EXISTS pages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            body TEXT,
-            title TEXT UNIQUE,
-            updated_by INTEGER REFERENCES users(id) NULL,
-            updated_at DATETIME
+            title TEXT UNIQUE
         )
         """
 
-    def __init__(self,
-                 id=None,
-                 title=None,
-                 body=None,
-                 updated_by=None,
-                 updated_at=None):
+    @classmethod
+    def create_with_body(cls, db, title, body):
+        page = cls()
+        page = cls(title=title)
+        if page.validate(db) and body:
+            page.save(db)
+            version = PageVersion(body=body, page_id=page.id)
+            version.save(db)
+        elif not body:
+            page.errors.append(["body", "page must contain a body"])
+
+        return page
+
+    @classmethod
+    def get_by_title(cls, db, title):
+        pages = cls.select(db, "WHERE title = ?", [title])
+        if pages:
+            return pages[0]
+
+    def __init__(self, id=None, title=None, history=None):
         super().__init__()
         self.id = id
         self.title = title
-        self.body = body
-        self.updated_by = updated_by
-        self.updated_at = updated_at
+        self.history = None
 
     def save_sql(self):
         if self.id:
-            sql = "UPDATE pages SET title = ?, body = ?, updated_at = ?, updated_by = ? WHERE id = ?"
-            return (sql, [
-                self.title, self.body, self.updated_at, self.updated_by, self.id
-            ])
-        sql = "INSERT INTO PAGES (title, body, updated_at, updated_by) VALUES (?, ?, ?, ?)"
-        return (sql, [self.title, self.body, self.updated_at, self.updated_by])
+            return "UPDATE pages SET title = ? WHERE id = ?", [
+                self.title, self.id
+            ]
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "title": self.title,
-            "body": self.body,
-            "updated_by": self.updated_by,
-            "updated_at": self.updated_at
-        }
+        return "INSERT INTO pages (title) VALUES (?)", [self.title]
 
-    def validate(self, db=None):
+    def validate(self, db):
         self.errors = []
         if not self.title:
-            self.errors.append(["title", "is required"])
-            return False
-
-        if not self.body:
-            self.errors.append(["body", "is required"])
+            self.errors.append(["title", "title is required"])
             return False
 
         if self.id:
@@ -242,24 +242,85 @@ class Page(DBObject):
             title_matches = self.select(db, "WHERE title = ?", [self.title])
 
         if title_matches:
-            self.errors.append(["title", "must be unique"])
+            self.errors.append(["title", "title must be unique"])
             return False
 
         return True
 
+    def with_history(self, db):
+        self.history = PageVersion.select(
+            db, "WHERE page_id = ? ORDER BY saved_at DESC", [self.id])
+        return self
+
+    def add_version(self, db, body):
+        version = PageVersion(body=body, page_id=self.id)
+        version.save(db)
+        if self.history:
+            self.history.insert(0, version)
+        return version
+
+    def before_delete(self, db):
+        sql = f"DELETE FROM {PageVersion.table_name} WHERE page_id = ?"
+        with db:
+            db.execute(sql, [self.id])
+
+    def to_dict(self):
+        retval = {"id": self.id, "title": self.title}
+        if self.history:
+            retval['body'] = self.history[0].body
+            retval['updated_at'] = self.history[0].saved_at
+        return retval
+
+
+class PageVersion(DBObject):
+    table_name = 'page_versions'
+
+    @classmethod
+    def create_table_sql(cls):
+        return """
+        CREATE TABLE IF NOT EXISTS page_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            page_id INTEGER REFERENCES pages(id),
+            body TEXT,
+            user_id INTEGER REFERENCES users(id) NULL,
+            saved_at TIMESTAMP
+        )
+        """
+
+    def __init__(self,
+                 page_id=None,
+                 id=None,
+                 body=None,
+                 user_id=None,
+                 saved_at=None):
+        super().__init__()
+        self.id = id
+        self.page_id = page_id
+        self.body = body
+        self.saved_at = saved_at
+        self.user_id = user_id
+
+    def save_sql(self):
+        if self.id:
+            return "UPDATE page_versions SET page_id = ?, body = ?, saved_at = ?, user_id = ? WHERE id = ?", [
+                self.page_id, self.body, self.saved_at, self.user_id, self.id
+            ]
+
+        return "INSERT INTO page_versions (page_id, body, user_id, saved_at) VALUES (?, ?, ?, ?)", [
+            self.page_id, self.body, self.user_id, self.saved_at
+        ]
+
     def before_save(self, db=None):
-        self.updated_at = datetime.now()
+        self.saved_at = datetime.now()
 
-
-# Exercise: create a User class. Users should have a username and password.
-# Passwords shouldn't be in cleartext, but try that first. If you get through that,
-# change it to have an encrypted password.
-# Before save, if there’s a password field set, encrypt the password using the
-# function hash_password from passwords.py.
+    def validate(self, db=None):
+        if not (self.body and self.page_id):
+            return False
+        return True
 
 
 class User(DBObject):
-    table_name = 'users'
+    table_name = "users"
 
     @classmethod
     def create_table_sql(cls):
@@ -267,46 +328,34 @@ class User(DBObject):
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
-            encrypted_password TEXT,
-            token TEXT
+            encrypted_password TEXT
         )
         """
-
-    @classmethod
-    def get_by_token(cls, db, token):
-        users = cls.select(db, "WHERE token = ?", [token])
-        if not users:
-            return None
-        else:
-            return users[0]
 
     def __init__(self,
                  id=None,
                  username=None,
-                 encrypted_password=None,
-                 token=None):
+                 password=None,
+                 encrypted_password=None):
         super().__init__()
         self.id = id
         self.username = username
         self.encrypted_password = encrypted_password
-        self.token = token
+        self.password = password
 
-    def set_password(self, password):
-        self.encrypted_password = hash_password(password)
+    def before_save(self, db=None):
+        if self.password:
+            self.encrypted_password = hash_password(self.password)
 
     def save_sql(self):
         if self.id:
-            return "UPDATE users SET username = ?, encrypted_password = ?, token = ? WHERE id = ?", [
-                self.username, self.encrypted_password, self.token, self.id
+            return "UPDATE users SET username = ?, encrypted_password = ? WHERE id = ?", [
+                self.username, self.encrypted_password, self.id
             ]
 
-        return "INSERT INTO users (username, encrypted_password, token) VALUES (?, ?, ?)", [
-            self.username, self.encrypted_password, self.token
+        return "INSERT INTO users (username, encrypted_password) VALUES (?, ?)", [
+            self.username, self.encrypted_password
         ]
-
-    def before_save(self, db):
-        if not self.token:
-            self.token = str(uuid4())
 
     def validate(self, db):
         self.errors = []
@@ -326,26 +375,26 @@ class User(DBObject):
             self.errors.append(['username', 'username must be unique'])
             return False
 
-        if not self.encrypted_password:
+        if not self.password and not self.encrypted_password:
             self.errors.append(['password', 'password is required'])
             return False
 
         return True
 
-    def to_dict(self):
-        return {"username": self.username, "token": self.token}
-
 
 def load_pages(db_path):
     db = sqlite3.connect(db_path)
-    Page.create_table(db)
+    PageVersion.create_table(db, recreate=True)
+    Page.create_table(db, recreate=True)
 
-    pages_dir = Path(__file__).parent / 'pages'
+    pages_dir = Path(__file__).parent / '..' / 'pages'
     pages = pages_dir.glob("*.md")
     for page_path in pages:
         with open(page_path, 'r') as file:
             title = file.readline().strip()
             body = file.read().strip()
             print(title)
-            page = Page(title=title, body=body)
+            page = Page(title=title)
             page.save(db)
+            version = PageVersion(body=body, page_id=page.id)
+            version.save(db)
