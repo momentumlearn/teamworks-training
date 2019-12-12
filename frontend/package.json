@@ -14,10 +14,12 @@
     "webpack-dev-server": "^3.9.0"
   },
   "dependencies": {
+    "@reach/router": "^1.2.1",
     "moment": "^2.24.0",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",
-    "react-markdown": "^4.2.2"
+    "react-markdown": "^4.2.2",
+    "remark-wiki-link": "0.0.4"
   },
   "babel": {
     "presets": [

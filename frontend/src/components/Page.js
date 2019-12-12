@@ -1,15 +1,35 @@
+/* globals fetch */
+
 import React from 'react'
-import moment from 'moment'
 import ReactMarkdown from 'react-markdown'
 
 class Page extends React.Component {
-  render () {    
-    const page = this.props.page
+  constructor () {
+    super()
+    this.state = {
+      page: null,
+      errorRetrievingData: false
+    }
+  }
+
+  componentDidMount () {
+    const { pageName } = this.props
+    fetch(`http://localhost:5000/pages/${pageName}/`)
+      .then(response => response.json())
+      .then(data => this.setState({ page: data }))
+      .catch(err => this.setState({ errorRetrievingData: true }))
+  }
+
+  render () {
+    const { page } = this.state
 
     return (
       <div className='page'>
-        <h2>{page.title}</h2>
-        <ReactMarkdown source={page.body} />
+        {page &&
+          <>
+            <h2>{page.title}</h2>
+            <ReactMarkdown source={page.body} />
+          </>}
       </div>
     )
   }

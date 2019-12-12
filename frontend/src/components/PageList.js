@@ -15,7 +15,6 @@ class PageList extends React.Component {
                   <PageListItem
                     key={page.id}
                     page={page}
-                    openPage={this.props.setPage}
                   />)
                 )}
               </ul>

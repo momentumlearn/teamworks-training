@@ -1,6 +1,7 @@
 import React from 'react'
 import PageList from './PageList'
 import Page from './Page'
+import { Router } from '@reach/router'
 
 class App extends React.Component {
   constructor () {
@@ -31,7 +32,7 @@ class App extends React.Component {
     return (
       <div id='App' className='bg-lightest-blue sans-serif pt3 min-vh-100'>
         <div className='mw8 center bg-white pv2 ph3 ba b--blue br1'>
-          <h1 class='mt0'>
+          <h1 className='mt0'>
             <a
               onClick={(event) => { event.preventDefault(); this.setActivePage(null) }}
               href='#'
@@ -40,11 +41,10 @@ class App extends React.Component {
             </a>
           </h1>
           {this.state.errorRetrievingData && <div>We couldn't get your data! Try again later.</div>}
-          {
-            this.state.activePage === null
-              ? <PageList pages={this.state.pages} setPage={this.setActivePage} />
-              : <Page page={this.state.activePage} />
-          }
+          <Router>
+            <PageList pages={this.state.pages} path='/' />
+            <Page path=':pageName/' />
+          </Router>
         </div>
       </div>
     )
