@@ -16,12 +16,24 @@ class App extends React.Component {
     }
 
     this.setUser = this.setUser.bind(this)
+    this.handleLogout = this.handleLogout.bind(this)
   }
 
   setUser (username, token) {
     window.localStorage.setItem('wikiUsername', username)
     window.localStorage.setItem('wikiUserToken', token)
     this.setState({ user: { username: username, token: token } })
+  }
+
+  clearUser () {
+    window.localStorage.removeItem('wikiUsername')
+    window.localStorage.removeItem('wikiUserToken')
+    this.setState({ user: { } })
+  }
+
+  handleLogout (event) {
+    event.preventDefault()
+    this.clearUser()
   }
 
   componentDidMount () {
@@ -50,7 +62,7 @@ class App extends React.Component {
             </h1>
             <div className='tr'>
               {user.username
-                ? <span>Logged in as {user.username}</span>
+                ? <span>Logged in as {user.username} / <a href='#' onClick={this.handleLogout}>Logout</a></span>
                 : <span><Link to='/login/'>Login</Link> / <Link to='/register/'>Register</Link></span>}
             </div>
           </div>
