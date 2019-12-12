@@ -2,6 +2,7 @@ import sqlite3
 from pathlib import Path
 
 from flask import Flask, g, request, current_app
+from flask_cors import CORS
 
 from .data import DBObject, Page, PageVersion
 
@@ -9,6 +10,7 @@ from .data import DBObject, Page, PageVersion
 def create_app():
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+    CORS(app)
     app.config.from_mapping(
         SECRET_KEY='dev', DATABASE=Path(__file__).parent / 'wiki.sqlite3')
 

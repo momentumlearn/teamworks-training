@@ -22,6 +22,12 @@
   * Popular libraries to use with Flask
   * Wrap up
 
+## Setting up the API
+
+1. Make sure you have Python 3 and pipenv installed.
+2. Run `pipenv install` in this repository
+3. Copy `sample.sqlite3` to `api/wiki.sqlite3`.
+4. Run `make api`.
 
 ## Links
 
