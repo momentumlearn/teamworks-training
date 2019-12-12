@@ -390,7 +390,7 @@ class User(DBObject):
                 self.username, self.encrypted_password, self.token, self.id
             ]
 
-        return "INSERT INTO users (username, encrypted_password, token) VALUES (?, ?)", [
+        return "INSERT INTO users (username, encrypted_password, token) VALUES (?, ?, ?)", [
             self.username, self.encrypted_password, self.token
         ]
 
