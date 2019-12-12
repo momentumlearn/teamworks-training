@@ -1,35 +1,35 @@
 import React from 'react'
 import { navigate, Link } from '@reach/router'
 
-class Login extends React.Component {
+class Register extends React.Component {
   constructor () {
     super()
     this.state = {
       username: '',
       password: '',
-      invalidUsernameOrPassword: false
+      errors: []
     }
-
-    this.handleLogin = this.handleLogin.bind(this)
-    this.handleInputChange = this.handleInputChange.bind(this)
+    this.handleRegister = this.handleRegister.bind(this)
   }
 
-  handleLogin (event) {
+  handleRegister (event) {
     event.preventDefault()
-    fetch('http://localhost:5000/auth/token/', {
+
+    const { username, password } = this.state
+    fetch('http://localhost:5000/auth/user/', {
       method: 'POST',
+      body: JSON.stringify({ username, password }),
       headers: {
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ username: this.state.username, password: this.state.password })
+      }
     })
       .then(response => response.json())
       .then(data => {
-        if (data.token) {
-          this.props.setUser(this.state.username, data.token)
-          navigate('/')
+        if (data.errors) {
+          this.setState({ errors: data.errors })
         } else {
-          this.setState({ invalidUsernameOrPassword: true })
+          this.props.setUser(data.username, data.token)
+          navigate('/')
         }
       })
   }
@@ -40,16 +40,13 @@ class Login extends React.Component {
 
   render () {
     return (
-      <div id='Login'>
-        {
-          this.state.invalidUsernameOrPassword &&
-            <p className='red'>
-            That username or password is invalid.
-            </p>
-        }
-        <form className='measure center' onSubmit={this.handleLogin}>
+      <div id='Register'>
+        {this.state.errors.length > 0 &&
+          this.state.errors.map(error => <p key={error[0]} className='red'>{error[1]}</p>)}
+
+        <form className='measure center' onSubmit={this.handleRegister}>
           <fieldset id='sign_up' className='ba b--transparent ph0 mh0'>
-            <legend className='f4 fw6 ph0 mh0'>Sign In</legend>
+            <legend className='f4 fw6 ph0 mh0'>Register</legend>
             <div className='mt3'>
               <label className='db fw6 lh-copy f6' htmlFor='username'>Username</label>
               <input
@@ -70,13 +67,13 @@ class Login extends React.Component {
             </div>
           </fieldset>
           <div>
-            <input className='b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib' type='submit' value='Sign in' />
+            <input className='b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib' type='submit' value='Register' />
           </div>
         </form>
-        <p>Don't have an account? <Link to='/register/'>Register</Link></p>
+        <p>Already have an account? <Link to='/login/'>Login</Link></p>
       </div>
     )
   }
 }
 
-export default Login
+export default Register

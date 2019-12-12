@@ -2,6 +2,7 @@ import React from 'react'
 import PageList from './PageList'
 import Page from './Page'
 import Login from './Login'
+import Register from './Register'
 import { Router, Link } from '@reach/router'
 
 class App extends React.Component {
@@ -50,13 +51,14 @@ class App extends React.Component {
             <div className='tr'>
               {user.username
                 ? <span>Logged in as {user.username}</span>
-                : <Link to='/login/'>Login</Link>}
+                : <span><Link to='/login/'>Login</Link> / <Link to='/register/'>Register</Link></span>}
             </div>
           </div>
           {this.state.errorRetrievingData && <div>We couldn't get your data! Try again later.</div>}
           <Router>
             <PageList pages={this.state.pages} path='/' />
             <Login path='login/' setUser={this.setUser} />
+            <Register path='register/' setUser={this.setUser} />
             <Page path=':pageName/' />
           </Router>
         </div>
