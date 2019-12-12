@@ -29,6 +29,13 @@
 3. Copy `sample.sqlite3` to `api/wiki.sqlite3`.
 4. Run `make api`.
 
+## Setting up the frontend
+
+1. Make sure you have Node.js and NPM installed.
+2. Run `cd frontend/`.
+3. Run `npm install`.
+4. Run `npm start`.
+
 ## Links
 
 * [Jupyter notebooks](notebooks/)
