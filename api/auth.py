@@ -48,7 +48,7 @@ def register_user():
     user = User(username=data.get('username'), password=data.get('password'))
     if user.validate(db):
         user.save(db)
-        return {"username": user.username}, 201
+        return {"username": user.username, "token": user.token}, 201
     return {"errors": user.errors}, 422
 
 

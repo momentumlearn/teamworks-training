@@ -10,7 +10,7 @@ def get_db():
     Establish a per-thread connection to the database.
     """
     if 'db' not in g:
-        g.db = sqlite3.connect(current_app.config['DATABASE'])
+        g.db = sqlite3.connect(str(current_app.config['DATABASE']))
     return g.db
 
 
