@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
+import urllib.parse
 
 from .passwords import hash_password, verify_password
 
@@ -264,12 +265,22 @@ class Page(DBObject):
         with db:
             db.execute(sql, [self.id])
 
-    def to_dict(self):
-        retval = {"id": self.id, "title": self.title}
+    def to_dict(self, all_history=False):
+        retval = {
+            "id": self.id,
+            "title": self.title,
+            "url": f"/pages/{urllib.parse.quote(self.title)}/"
+        }
         if self.history:
             retval['body'] = self.history[0].body
             retval['updated_at'] = self.history[0].saved_at
             retval['updated_by'] = self.history[0].user_id
+            if all_history:
+                retval['history'] = [{
+                    "body": version.body,
+                    "saved_at": version.saved_at,
+                    "user_id": version.user_id
+                } for version in self.history]
         return retval
 
 

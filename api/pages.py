@@ -31,7 +31,7 @@ def page_detail(title):
         elif request.method == "DELETE":
             return delete_page(page)
         else:
-            return page.with_history(db).to_dict()
+            return page.with_history(db).to_dict(all_history=True)
     else:
         return '', 404
 
