@@ -71,7 +71,7 @@ class App extends React.Component {
             <PageList pages={this.state.pages} path='/' />
             <Login path='login/' setUser={this.setUser} />
             <Register path='register/' setUser={this.setUser} />
-            <Page path=':pageName/' />
+            <Page path=':pageName/' userToken={this.state.user.token} />
           </Router>
         </div>
       </div>
