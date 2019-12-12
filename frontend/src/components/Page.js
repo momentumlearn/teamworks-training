@@ -1,75 +1,66 @@
 /* globals fetch */
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import EditPage from './EditPage'
 
-class Page extends React.Component {
-  constructor () {
-    super()
-    this.state = {
-      page: null,
-      errorRetrievingData: false,
-      editing: false
-    }
+const Page = ({ pageName, userToken }) => {
+  const [page, setPage] = useState(null)
+  const [error, setError] = useState(false)
+  const [editing, setEditing] = useState(false)
 
-    this.updatePageBody = this.updatePageBody.bind(this)
-  }
-
-  componentDidMount () {
-    const { pageName } = this.props
+  useEffect(() => {
     fetch(`http://localhost:5000/pages/${pageName}/`)
       .then(response => response.json())
-      .then(data => this.setState({ page: data }))
-      .catch(err => this.setState({ errorRetrievingData: true }))
-  }
+      .then(data => setPage(data))
+      .catch(err => setError(true))
+  }, [])
 
-  updatePageBody (newBody) {
-    if (!this.props.userToken) {
+  useEffect(() => {
+    if (page) {
+      window.document.title = `${page.title} (${page.body.length})`
+    }
+  })
+
+  const updatePageBody = (newBody) => {
+    if (!userToken) {
       return
     }
 
-    const { page } = this.state
     fetch(`http://localhost:5000/pages/${page.title}/`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Token ${this.props.userToken}`
+        Authorization: `Token ${userToken}`
       },
       body: JSON.stringify({ body: newBody })
     })
       .then(response => {
         if (response.ok) {
-          this.setState({
-            editing: false,
-            page: { ...page, body: newBody }
-          })
+          setEditing(false)
+          setPage({ ...page, body: newBody })
         }
       })
   }
 
-  render () {
-    const { page } = this.state
-
-    if (this.state.editing) {
-      return (
-        <EditPage
-          page={page}
-          updatePageBody={this.updatePageBody}
-        />)
-    }
-
+  if (editing) {
     return (
-      <div className='page'>
-        {page &&
-          <div>
-            <h2>{page.title}</h2>
-            <ReactMarkdown source={page.body} />
-            <button onClick={() => this.setState({ editing: true })}>Edit this page</button>
-          </div>}
-      </div>
-    )
+      <EditPage
+        page={page}
+        updatePageBody={updatePageBody}
+      />)
   }
+
+  return (
+    <div className='page'>
+      {page &&
+        <div>
+          <h2>{page.title}</h2>
+          <ReactMarkdown source={page.body} />
+          <button onClick={() => setEditing(true)}>Edit this page</button>
+        </div>}
+    </div>
+  )
 }
 
 export default Page
