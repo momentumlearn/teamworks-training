@@ -1,82 +1,64 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useLocalStorage } from '../hooks'
 import PageList from './PageList'
 import Page from './Page'
 import Login from './Login'
 import Register from './Register'
 import { Router, Link } from '@reach/router'
 
-class App extends React.Component {
-  constructor () {
-    super()
-    this.state = {
-      activePage: null,
-      pages: [],
-      errorRetrievingData: false,
-      user: {}
-    }
+const App = () => {
+  const [activePage, setActivePage] = useState(null)
+  const [pages, setPages] = useState([])
+  const [error, setError] = useState(false)
+  const [user, setUser] = useState({})
+  const [username, setUsername] = useLocalStorage('wikiUsername', null)
+  const [userToken, setUserToken] = useLocalStorage('wikiUserToken', null)
 
-    this.setUser = this.setUser.bind(this)
-    this.handleLogout = this.handleLogout.bind(this)
+  const storeUser = (username, token) => {
+    setUsername(username)
+    setUserToken(token)
   }
 
-  setUser (username, token) {
-    window.localStorage.setItem('wikiUsername', username)
-    window.localStorage.setItem('wikiUserToken', token)
-    this.setState({ user: { username: username, token: token } })
+  const clearUser = () => {
+    setUsername(undefined)
+    setUserToken(undefined)
   }
 
-  clearUser () {
-    window.localStorage.removeItem('wikiUsername')
-    window.localStorage.removeItem('wikiUserToken')
-    this.setState({ user: { } })
-  }
-
-  handleLogout (event) {
+  const handleLogout = (event) => {
     event.preventDefault()
-    this.clearUser()
+    clearUser()
   }
 
-  componentDidMount () {
-    const username = window.localStorage.getItem('wikiUsername')
-    const token = window.localStorage.getItem('wikiUserToken')
-    if (username && token) {
-      this.setState({ user: { username: username, token: token } })
-    }
-
+  useEffect(() => {
     fetch('http://localhost:5000/pages/')
       .then(response => response.json())
-      .then(data => this.setState({ pages: data.pages }))
-      .catch(data => {
-        this.setState({ errorRetrievingData: true })
-      })
-  }
+      .then(data => setPages(data.pages))
+      .catch(data => setError(true))
+  }, [])
 
-  render () {
-    const { user } = this.state
-    return (
-      <div id='App' className='bg-lightest-blue sans-serif pt3 min-vh-100'>
-        <div className='mw8 center bg-white pv2 ph3 ba b--blue br1'>
-          <div className='flex items-center justify-between'>
-            <h1 className='mv0'>
-              <Link to='/'>PL Wiki</Link>
-            </h1>
-            <div className='tr'>
-              {user.username
-                ? <span>Logged in as {user.username} / <a href='#' onClick={this.handleLogout}>Logout</a></span>
-                : <span><Link to='/login/'>Login</Link> / <Link to='/register/'>Register</Link></span>}
-            </div>
+  return (
+    <div id='App' className='bg-lightest-blue sans-serif pt3 min-vh-100'>
+      <div className='mw8 center bg-white pv2 ph3 ba b--blue br1'>
+        <div className='flex items-center justify-between'>
+          <h1 className='mv0'>
+            <Link to='/'>PL Wiki</Link>
+          </h1>
+          <div className='tr'>
+            {username
+              ? <span>Logged in as {username} / <a href='#' onClick={handleLogout}>Logout</a></span>
+              : <span><Link to='/login/'>Login</Link> / <Link to='/register/'>Register</Link></span>}
           </div>
-          {this.state.errorRetrievingData && <div>We couldn't get your data! Try again later.</div>}
-          <Router>
-            <PageList pages={this.state.pages} path='/' />
-            <Login path='login/' setUser={this.setUser} />
-            <Register path='register/' setUser={this.setUser} />
-            <Page path=':pageName/' userToken={this.state.user.token} />
-          </Router>
         </div>
+        {error && <div>We couldn't get your data! Try again later.</div>}
+        <Router>
+          <PageList pages={pages} path='/' />
+          <Login path='login/' setUser={storeUser} />
+          <Register path='register/' setUser={storeUser} />
+          <Page path=':pageName/' userToken={userToken} />
+        </Router>
       </div>
-    )
-  }
+    </div>
+  )
 }
 
 export default App
