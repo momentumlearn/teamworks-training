@@ -1,41 +1,28 @@
-import React from 'react'
+import React, { useState } from 'react'
 
-class EditPage extends React.Component {
-  constructor (props) {
-    super(props)
+const EditPage = ({ page, updatePageBody }) => {
+  const [body, setBody] = useState(page.body)
 
-    this.state = {
-      body: props.page.body
-    }
-
-    this.handleSave = this.handleSave.bind(this)
-  }
-
-  handleSave (event) {
+  const handleSave = (event) => {
     event.preventDefault()
-    this.props.updatePageBody(this.state.body)
+    updatePageBody(body)
   }
 
-  render () {
-    const { page } = this.props
-    const { body } = this.state
-
-    return (
-      <div id='EditPage'>
-        <h2>{page.title}</h2>
-        <form onSubmit={this.handleSave}>
-          <div>
-            <textarea
-              style={{ width: '100%', height: '300px' }}
-              value={body}
-              onChange={(event) => this.setState({ body: event.target.value })}
-            />
-          </div>
-          <button type='submit'>Save page</button>
-        </form>
-      </div>
-    )
-  }
+  return (
+    <div id='EditPage'>
+      <h2>{page.title}</h2>
+      <form onSubmit={handleSave}>
+        <div>
+          <textarea
+            style={{ width: '100%', height: '300px' }}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+          />
+        </div>
+        <button type='submit'>Save page</button>
+      </form>
+    </div>
+  )
 }
 
 export default EditPage
