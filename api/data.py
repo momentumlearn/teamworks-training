@@ -418,6 +418,9 @@ class User(DBObject):
 
         return True
 
+    def to_dict(self):
+        return {"username": self.username}
+
 
 def load_pages(db_path):
     db = sqlite3.connect(db_path)

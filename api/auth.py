@@ -29,7 +29,19 @@ def load_user():
         g.user = None
 
 
-@bp.route('/user/', methods=['POST'])
+@bp.route('/user/', methods=['GET', 'POST'])
+def user():
+    if request.method == 'POST':
+        return register_user()
+    else:
+        return show_user()
+
+
+@login_required
+def show_user():
+    return g.user.to_dict()
+
+
 def register_user():
     db = get_db()
     data = request.get_json()
