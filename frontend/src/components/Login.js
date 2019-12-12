@@ -16,7 +16,6 @@ class Login extends React.Component {
 
   handleLogin (event) {
     event.preventDefault()
-    console.log('logging in')
     fetch('http://localhost:5000/auth/token/', {
       method: 'POST',
       headers: {
@@ -55,7 +54,7 @@ class Login extends React.Component {
               <label className='db fw6 lh-copy f6' htmlFor='username'>Username</label>
               <input
                 className='pa2 input-reset ba bg-transparent w-100' type='text'
-                name='username' id='email-address'
+                name='username' id='username'
                 onChange={this.handleInputChange('username')}
                 value={this.state.username}
               />

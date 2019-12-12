@@ -40,3 +40,4 @@
 
 * [Jupyter notebooks](notebooks/)
 * [How to set up React with Webpack](https://www.robinwieruch.de/minimal-react-webpack-babel-setup)
+* [Thinking in React Hooks](https://wattenberger.com/blog/react-hooks)
